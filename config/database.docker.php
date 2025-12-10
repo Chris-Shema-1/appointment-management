@@ -5,9 +5,9 @@
  */
 
 // Database credentials from environment variables
-define('DB_HOST', getenv('DB_HOST') ?: 'db');
-define('DB_USER', getenv('DB_USER') ?: 'app_user');
-define('DB_PASS', getenv('DB_PASS') ?: 'app_password');
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'appointment_system');
 
 // Create connection

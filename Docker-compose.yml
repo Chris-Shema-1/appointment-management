@@ -15,7 +15,7 @@ services:
       - "3307:3306"  # Map to 3307 to avoid conflict with local MySQL
     volumes:
       - db_data:/var/lib/mysql
-      - ./database/appointment_system.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/setup_database.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - appointment_network
     healthcheck:
@@ -40,10 +40,12 @@ services:
     networks:
       - appointment_network
     environment:
+      # Connect to the DB service over the docker network (service name: 'db')
       - DB_HOST=db
       - DB_USER=app_user
       - DB_PASS=app_password
       - DB_NAME=appointment_system
+      - DB_PORT=3306
 
   # phpMyAdmin Service (Optional - for database management)
   phpmyadmin:
