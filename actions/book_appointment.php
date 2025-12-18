@@ -54,15 +54,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (empty($errors)) {
-        // Check if doctor has another appointment at this time
-        $doctor_conflict = $conn->prepare("SELECT appointment_id FROM appointments 
-                                          WHERE doctor_id = ? AND appointment_date = ? AND appointment_time = ?");
-        $doctor_conflict->bind_param("iss", $doctor_id, $appointment_date, $appointment_time);
-        $doctor_conflict->execute();
-        if ($doctor_conflict->get_result()->num_rows > 0) {
-            $errors[] = "This time slot is not available for this doctor";
+        // Get the day of week for the appointment date
+        $day_of_week = date('l', strtotime($appointment_date)); // Returns e.g., 'Monday', 'Tuesday', etc.
+        
+        // Check if doctor is available on this day
+        $availability_check = $conn->prepare("SELECT schedule_id, start_time, end_time FROM doctor_schedule 
+                                              WHERE doctor_id = ? AND day_of_week = ? AND is_available = 1");
+        $availability_check->bind_param("is", $doctor_id, $day_of_week);
+        $availability_check->execute();
+        $availability_result = $availability_check->get_result();
+        
+        if ($availability_result->num_rows === 0) {
+            $errors[] = "Dr. " . get_doctor_name($conn, $doctor_id) . " is not available on " . $day_of_week . "s. Please select a different date.";
+        } else {
+            // Doctor is available on this day, check if the requested time is within working hours
+            $schedule = $availability_result->fetch_assoc();
+            $start_time = $schedule['start_time'];
+            $end_time = $schedule['end_time'];
+            $appointment_end_time = date('H:i:s', strtotime($appointment_time . ' +30 minutes'));
+            
+            if ($appointment_time < $start_time || $appointment_end_time > $end_time) {
+                $errors[] = "The selected time is outside of Dr. " . get_doctor_name($conn, $doctor_id) . "'s working hours (" . format_time($start_time) . " - " . format_time($end_time) . "). Please choose a different time.";
+            }
         }
-        $doctor_conflict->close();
+        $availability_check->close();
+    }
+    
+    if (empty($errors)) {
+        // Check for overlapping appointments (30-minute duration)
+        $appointment_end_time = date('H:i:s', strtotime($appointment_time . ' +30 minutes'));
+        
+        // Find all appointments that overlap with the 30-minute window
+        $conflict_check = $conn->prepare("
+            SELECT a.appointment_id, 
+                   TIME_FORMAT(a.appointment_time, '%H:%i') as booked_time,
+                   DATE_FORMAT(a.appointment_date, '%M %d, %Y') as booked_date,
+                   u.full_name as patient_name
+            FROM appointments a
+            JOIN users u ON a.patient_id = u.user_id
+            WHERE a.doctor_id = ? 
+            AND a.appointment_date = ? 
+            AND a.status IN ('pending', 'confirmed')
+            AND (
+                (a.appointment_time < ? AND DATE_ADD(a.appointment_time, INTERVAL 30 MINUTE) > ?)
+            )
+        ");
+        $conflict_check->bind_param("isss", $doctor_id, $appointment_date, $appointment_end_time, $appointment_time);
+        $conflict_check->execute();
+        $conflict_result = $conflict_check->get_result();
+        
+        if ($conflict_result->num_rows > 0) {
+            $conflict = $conflict_result->fetch_assoc();
+            $errors[] = "This time slot conflicts with an existing appointment. " . 
+                       "Dr. " . get_doctor_name($conn, $doctor_id) . " has an appointment at " . 
+                       $conflict['booked_time'] . " on " . $conflict['booked_date'] . ". " .
+                       "Please choose a different time (appointments are 30 minutes each).";
+        }
+        $conflict_check->close();
     }
     
     if (empty($errors)) {

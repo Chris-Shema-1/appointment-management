@@ -109,4 +109,92 @@ function time_ago($date) {
         return format_date($date);
     }
 }
+
+/**
+ * Get doctor's full name by doctor_id
+ * @param object $conn - Database connection
+ * @param int $doctor_id - Doctor ID
+ * @return string - Doctor's full name or empty string if not found
+ */
+function get_doctor_name($conn, $doctor_id) {
+    $stmt = $conn->prepare("SELECT u.full_name FROM doctors d JOIN users u ON d.user_id = u.user_id WHERE d.doctor_id = ?");
+    $stmt->bind_param("i", $doctor_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $stmt->close();
+        return htmlspecialchars($row['full_name']);
+    }
+    $stmt->close();
+    return "Unknown Doctor";
+}
+
+/**
+ * Get available time slots for a doctor on a specific date (30-minute intervals)
+ * @param object $conn - Database connection
+ * @param int $doctor_id - Doctor ID
+ * @param string $date - Date in Y-m-d format
+ * @return array - Array of available times (HH:MM format)
+ */
+function get_available_slots($conn, $doctor_id, $date) {
+    $day_of_week = date('l', strtotime($date));
+    
+    // Get doctor's working hours for this day
+    $schedule_stmt = $conn->prepare("SELECT start_time, end_time FROM doctor_schedule 
+                                     WHERE doctor_id = ? AND day_of_week = ? AND is_available = 1");
+    $schedule_stmt->bind_param("is", $doctor_id, $day_of_week);
+    $schedule_stmt->execute();
+    $schedule_result = $schedule_stmt->get_result();
+    
+    if ($schedule_result->num_rows === 0) {
+        return []; // Doctor not available this day
+    }
+    
+    $schedule = $schedule_result->fetch_assoc();
+    $start_time = strtotime($schedule['start_time']);
+    $end_time = strtotime($schedule['end_time']);
+    $schedule_stmt->close();
+    
+    // Get all booked appointments for this doctor on this date
+    $booked_stmt = $conn->prepare("
+        SELECT appointment_time FROM appointments 
+        WHERE doctor_id = ? AND appointment_date = ? AND status IN ('pending', 'confirmed')
+    ");
+    $booked_stmt->bind_param("is", $doctor_id, $date);
+    $booked_stmt->execute();
+    $booked_result = $booked_stmt->get_result();
+    
+    $booked_times = [];
+    while ($row = $booked_result->fetch_assoc()) {
+        $booked_times[] = strtotime($row['appointment_time']);
+    }
+    $booked_stmt->close();
+    
+    // Generate all possible 30-minute slots
+    $available_slots = [];
+    $current_time = $start_time;
+    
+    while ($current_time < $end_time) {
+        $slot_end = $current_time + (30 * 60); // 30 minutes
+        
+        // Check if this slot is available (not booked and within working hours)
+        $is_available = true;
+        foreach ($booked_times as $booked) {
+            // Check for overlap
+            if ($current_time < $booked + (30 * 60) && $slot_end > $booked) {
+                $is_available = false;
+                break;
+            }
+        }
+        
+        if ($is_available && $slot_end <= $end_time) {
+            $available_slots[] = date('H:i', $current_time);
+        }
+        
+        $current_time += (30 * 60); // Move to next 30-minute slot
+    }
+    
+    return $available_slots;
+}
 ?>
