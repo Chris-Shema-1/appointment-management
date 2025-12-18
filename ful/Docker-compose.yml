@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  db:
+    image: mysql:8.0
+    container_name: appointment_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: appointment_system
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password
+    ports:
+      - "3307:3306"  # Map to 3307 to avoid conflict with local MySQL
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./scripts/setup_database.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - appointment_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # PHP Apache Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: appointment_app
+    restart: unless-stopped
+    ports:
+      - "8080:80"  # Access app on http://localhost:8080
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - appointment_network
+    environment:
+      # Connect to the DB service over the docker network (service name: 'db')
+      - DB_HOST=db
+      - DB_USER=app_user
+      - DB_PASS=app_password
+      - DB_NAME=appointment_system
+      - DB_PORT=3306
+
+  # phpMyAdmin Service (Optional - for database management)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: appointment_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8081:80"  # Access phpMyAdmin on http://localhost:8081
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root_password
+    depends_on:
+      - db
+    networks:
+      - appointment_network
+
+# Define volumes
+volumes:
+  db_data:
+    driver: local
+
+# Define networks
+networks:
+  appointment_network:
+    driver: bridge
