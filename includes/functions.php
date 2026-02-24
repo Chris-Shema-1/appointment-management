@@ -197,4 +197,21 @@ function get_available_slots($conn, $doctor_id, $date) {
     
     return $available_slots;
 }
+
+/**
+ * Returns 'active' if the given path is contained in the current request URI.
+ *
+ * This helper makes it easy to add an "active" class to navigation links
+ * based on the current page. It checks for a substring match in
+ * $_SERVER['REQUEST_URI'], which works regardless of whether the user is
+ * a doctor or a patient (paths include the appropriate subfolder).
+ *
+ * @param string $path Partial path to check (e.g. 'doctor/appointments.php').
+ * @return string 'active' or '' suitable for echoing inside a class attribute.
+ */
+function isActive($path) {
+    $current = $_SERVER['REQUEST_URI'] ?? '';
+    return strpos($current, $path) !== false ? 'active' : '';
+}
+
 ?>

@@ -29,32 +29,32 @@ $unread_count = get_unread_notification_count($conn, $patient_id);
         <!-- Navigation Menu -->
         <nav class="navbar-menu" id="navbarMenu">
             <?php if($_SESSION['user_type'] === 'patient'): ?>
-                <a href="../../pages/patient/dashboard.php" class="nav-link">
+                <a href="../../pages/patient/dashboard.php" class="nav-link <?php echo isActive('patient/dashboard.php'); ?>">
                     <i class="fas fa-home"></i> Dashboard
                 </a>
-                <a href="../../pages/patient/book-appointment.php" class="nav-link">
+                <a href="../../pages/patient/book-appointment.php" class="nav-link <?php echo isActive('patient/book-appointment.php'); ?>">
                     <i class="fas fa-calendar-plus"></i> Book Appointment
                 </a>
-                <a href="../../pages/patient/my-appointments.php" class="nav-link">
+                <a href="../../pages/patient/my-appointments.php" class="nav-link <?php echo isActive('patient/my-appointments.php'); ?>">
                     <i class="fas fa-list"></i> My Appointments
                 </a>
-                <a href="../../pages/patient/notifications.php" class="nav-link">
+                <a href="../../pages/patient/notifications.php" class="nav-link <?php echo isActive('patient/notifications.php'); ?>">
                     <i class="fas fa-bell"></i> Notifications
                     <?php if($unread_count > 0): ?>
                         <span class="badge"><?php echo $unread_count; ?></span>
                     <?php endif; ?>
                 </a>
             <?php else: ?>
-                <a href="../../pages/doctor/dashboard.php" class="nav-link">
+                <a href="../../pages/doctor/dashboard.php" class="nav-link <?php echo isActive('doctor/dashboard.php'); ?>">
                     <i class="fas fa-home"></i> Dashboard
                 </a>
-                <a href="../../pages/doctor/appointments.php" class="nav-link">
+                <a href="../../pages/doctor/appointments.php" class="nav-link <?php echo isActive('doctor/appointments.php'); ?>">
                     <i class="fas fa-calendar-check"></i> Appointments
                 </a>
-                <a href="../../pages/doctor/schedule.php" class="nav-link">
+                <a href="../../pages/doctor/schedule.php" class="nav-link <?php echo isActive('doctor/schedule.php'); ?>">
                     <i class="fas fa-clock"></i> Schedule
                 </a>
-                <a href="../../pages/doctor/notifications.php" class="nav-link">
+                <a href="../../pages/doctor/notifications.php" class="nav-link <?php echo isActive('doctor/notifications.php'); ?>">
                     <i class="fas fa-bell"></i> Notifications
                     <?php if($unread_count > 0): ?>
                         <span class="badge"><?php echo $unread_count; ?></span>

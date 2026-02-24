@@ -51,7 +51,7 @@ a {
 
 a:hover {
   color: var(--primary-dark);
-  text-decoration: underline;
+  text-decoration: none; /* remove underline on hover as requested */
 }
 
 /* ========================================
@@ -483,6 +483,15 @@ a:hover {
   background-color: var(--bg-light);
   color: var(--primary-blue);
 }
+
+/* highlight active page in navigation
+.nav-link.active {
+  background-color: var(--primary-blue);
+  color: white;
+}
+.nav-link.active:hover {
+  background-color: var(--primary-dark);
+} */
 
 .badge {
   position: absolute;
